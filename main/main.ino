@@ -7,7 +7,7 @@
 #include "RunningAverage.h"
 
 
-uint8_t ratios[] = { 100, 58, 42, 31, 25, 21, 18 };  // Set in the middle INBETWEEN your car's each gears "rpm per kmh" ratios. The default works for many cars, tested on both a BMW M2 and a Peugeot 108 :-D 
+uint8_t ratios[] = { 100, 58, 42, 31, 25, 21, 18 };  // Set in the middle INBETWEEN your car's each gears "rpm per kmh" ratios. The default works for many cars, tested on both a BMW M2 DCT and a Peugeot 108 :-D 
 
 #define DEBUG
 
@@ -69,7 +69,7 @@ class FilterCallback : public BLECharacteristicCallbacks {
       case 0x01: // ALLOW_ALL
         if (value.length() == 3) {
           canBusPacketIdInfo.reset();
-          canBusPacketIdInfo.setDefaultNotifyInterval(sendInterval); // Forcer à 20 ms
+          canBusPacketIdInfo.setDefaultNotifyInterval(sendInterval); 
           canBusAllowUnknownPackets = true;
         }
         break;
@@ -77,7 +77,7 @@ class FilterCallback : public BLECharacteristicCallbacks {
         if (value.length() == 7) {
           uint16_t notifyIntervalMs = value[1] << 8 | value[2];
           uint32_t pid = value[3] << 24 | value[4] << 16 | value[5] << 8 | value[6];
-          canBusPacketIdInfo.setNotifyInterval(pid, sendInterval); // Forcer à 20 ms
+          canBusPacketIdInfo.setNotifyInterval(pid, sendInterval); 
         }
         break;
     }
@@ -92,8 +92,8 @@ void startAdvertising() {
   pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
   pAdvertising->setScanResponse(true);
-  pAdvertising->setMinInterval(0x20); // 20 ms
-  pAdvertising->setMaxInterval(0x40); // 40 ms
+  pAdvertising->setMinInterval(0x20); 
+  pAdvertising->setMaxInterval(0x40); 
   pAdvertising->start();
 }
 
@@ -137,7 +137,7 @@ void startRC() {
 
 void sendGearData() {
   unsigned long currentTime = millis();
-  if (currentTime - lastNotifyTime < sendInterval) return; // Respecter l'intervalle de notification
+  if (currentTime - lastNotifyTime < sendInterval) return; 
   lastNotifyTime = currentTime;
 
   PacketIdInfoItem* infoItem;

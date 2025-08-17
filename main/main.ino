@@ -26,8 +26,9 @@ uint8_t gear = 0;
 uint16_t ratio;
 uint16_t average;
 float changes;
+#define AVGFILTERSIZE 4
 
-RunningAverage myRA(10);
+RunningAverage myRA(AVGFILTERSIZE);
 
 
 #define SERVICE_UUID "00001ff8-0000-1000-8000-00805f9b34fb"
@@ -184,7 +185,7 @@ void sendGearData() {
     infoItem->markNotified();
   }
   packetId = 20;
-  tempData[4] = (uint8_t)abs((int16_t)10*changes);
+  tempData[4] = (uint8_t)abs((int16_t)100*changes);
   ((uint32_t*)tempData)[0] = packetId;
   infoItem = canBusPacketIdInfo.findItem(packetId, canBusAllowUnknownPackets);
   if (infoItem && infoItem->shouldNotify()) {
@@ -201,30 +202,38 @@ void sendGearData() {
 
 void loop() {
 
-
+  static uint16_t prevratio = 0;
+  
+  static uint8_t prev = 0;
+  static uint8_t next = 0;
+  static uint8_t nextcntr = 0;
+  
   unsigned long currentTime = millis();
   if (currentTime - lastSendTime >= sendInterval) {
 
     requestCar();     // REPLIES ARE HANDLED BY CALLBACK. DATA PUT IN GLOBAL VARS kmh AND rpm
     delay(10);        // ALLOW TIME FOR REPLY IN CALLBACK
 
-    uint16_t prevratio = ratio;
+    prevratio = ratio;
     if ( kmh>0 ) { ratio = (uint16_t) (rpm/kmh); }
     myRA.addValue((ratio-prevratio));
     changes = myRA.getAverage();
   
-    if ( kmh<1 )                { gear = 0; }
-    else if ( changes>0.1 || changes<-0.1 )   { int dummy = 111; } 
-                                              // catches when clutch is pressed and ratio value has large delta. Smaller values equals noise when in gear but also when by *chance* speed and rpm happen to match even when clutch is pressed
-    else if ( ratio>ratios[0] ) { gear = 1; } 
-    else if ( ratio>ratios[1] ) { gear = 2; } 
-    else if ( rpm<1200 )                      { int dummy = 111; } 
-                                              // when switching gears very slow rpm goes slowly towards idle and often happen by chance to match change ratio between rpm and kmh resulting in wrong (high) gears shown. This disables gear matching when rpm is getting close to idle.
-    else if ( ratio>ratios[2] ) { gear = 3; } 
-    else if ( ratio>ratios[3] ) { gear = 4; } 
-    else if ( ratio>ratios[4] ) { gear = 5; } 
-    else if ( ratio>ratios[5] ) { gear = 6; } 
-    else if ( ratio>ratios[6] ) { gear = 7; } 
+    prev = next;
+    if ( kmh<1 )                            { next = 0; }
+    else if ( changes>0.1 || changes<-0.1 ) { int noop; }     // catches when clutch is pressed and ratio value has changes. Smaller changes can equal noise when in gear but also when by *chance* speed and rpm happen to match even when clutch is pressed
+    else if ( ratio>ratios[0] )             { next = 1; } 
+    else if ( ratio>ratios[1] )             { next = 2; } 
+    else if ( rpm<1200 )                    { int noop; }     // when switching gears very slow rpm goes slowly towards idle and often happen by chance to match change ratio between rpm and kmh resulting in wrong (high) gears shown. This disables gear matching when rpm is getting close to idle.
+    else if ( ratio>ratios[2] )             { next = 3; } 
+    else if ( ratio>ratios[3] )             { next = 4; } 
+    else if ( ratio>ratios[4] )             { next = 5; } 
+    else if ( ratio>ratios[5] )             { next = 6; } 
+    else if ( ratio>ratios[6] )             { next = 7; } 
+    
+    if (next==prev) { nextcntr++; }    
+    else            { nextcntr = 0; }
+    if (nextcntr>2) { gear = next; }    // Filter away single "glitches" of ratio (gear) matches that can be erroneous due to clutch being pushed down
   
     printData();      // PRINT DATA ON SERIAL USB
     if (isCanBusConnected) {
@@ -314,7 +323,7 @@ void printData(void) {
   Serial.printf("%3d kmh    ", kmh);
   Serial.printf("%5d rpm    ", rpm);
   Serial.printf("%3d ratio    ", ratio);
-  Serial.printf("%6.2f change    ", changes);
+  Serial.printf("%6.3f change    ", changes);
   Serial.printf("%3d gear    ", gear);
   Serial.println();
 #endif

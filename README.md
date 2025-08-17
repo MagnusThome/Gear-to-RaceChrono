@@ -14,5 +14,6 @@ Then add the following PIDs:
 0x21 (17) = Speed kmh  
 0x22 (18) = Engine RPM  
   
-You can also add this to get a log of your car's rpm/kmh ratios to use to set the gear ratio thresholds in the main code  
-0x23 (19) = ratio rpm/kmh
+You can also add this to get a log of your car's rpm/kmh ratios to use to set the gear ratio thresholds in the main code.  
+0x23 (19) = ratio rpm/kmh  
+You might get away with the default ratio values, at least for lower gears. But you probably need to edit the threshold ratios[] array at the top of main.ino to work with your car's ratios. 

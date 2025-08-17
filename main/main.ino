@@ -11,8 +11,8 @@ uint8_t ratios[] = { 100, 58, 42, 31, 25, 21, 18 };  // Set in the middle INBETW
 
 #define DEBUG
 
-#define CAN0_RX_GPIO GPIO_NUM_13  // 16 
-#define CAN0_TX_GPIO GPIO_NUM_14  // 17
+#define CAN0_RX_GPIO GPIO_NUM_13  // Connect to the CAN transceiver
+#define CAN0_TX_GPIO GPIO_NUM_14  // Connect to the CAN transceiver
 
 #define ENGINE_RPM                  0x0C
 #define VEHICLE_SPEED               0x0D

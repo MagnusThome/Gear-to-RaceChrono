@@ -7,7 +7,7 @@
 #include "RunningAverage.h"
 
 
-uint8_t ratios[] = { 100, 58, 42, 31, 25, 21, 18 };
+uint8_t ratios[] = { 100, 58, 42, 31, 25, 21, 18 };  // Set in the middle INBETWEEN your car's each gears "rpm per kmh" ratios. The default works for many cars, tested on both a BMW M2 and a Peugeot 108 :-D 
 
 #define DEBUG
 

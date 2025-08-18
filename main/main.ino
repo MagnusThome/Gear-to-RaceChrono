@@ -3,21 +3,37 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include "PacketIdInfo.h"
-#include "esp32_can.h"            // https://github.com/collin80/esp32_can AND https://github.com/collin80/can_common
+#include "esp32_can.h"       // https://github.com/collin80/esp32_can AND https://github.com/collin80/can_common
 #include "RunningAverage.h"
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-uint8_t ratios[] = { 100, 58, 42, 31, 25, 21, 18 };  // Set in the middle INBETWEEN your car's each gears "rpm per kmh" ratios. The default works for many cars, tested on both a BMW M2 DCT and a Peugeot 108 :-D 
+// Set each in the middle INBETWEEN your car's each gears "rpm per kmh" ratios. The default works for many cars, tested on both a BMW M2 DCT and a Peugeot 108 :-D 
+#define RATIOBETWEEN1AND2 100
+#define RATIOBETWEEN2AND3 58
+#define RATIOBETWEEN3AND4 42
+#define RATIOBETWEEN4AND5 31
+#define RATIOBETWEEN5AND6 25
+#define RATIOBETWEEN6AND7 21
+#define RATIOBETWEEN7AND8 18
 
-#define DEBUG
+#define CHANGETHRESHOLD 0.1   // Changes of ratio smaller than this means car is in gear and clutch pedal not pressed down = match a gear 
+#define MATCHGLITCHES 4     // Number of times a valid ratio match must occur before showing the new gear value
+#define FILTERSIZE 4        // Size of samples in the running average filter of ratio
 
 #define CAN0_RX_GPIO GPIO_NUM_13  // Connect to the CAN transceiver
 #define CAN0_TX_GPIO GPIO_NUM_14  // Connect to the CAN transceiver
 
-#define ENGINE_RPM                  0x0C
-#define VEHICLE_SPEED               0x0D
-#define CAN_REQST_ID                0x7DF 
-#define CAN_REPLY_ID                0x7E8
+#define DEBUG
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+uint8_t ratios[] = { RATIOBETWEEN1AND2, RATIOBETWEEN2AND3, RATIOBETWEEN3AND4, RATIOBETWEEN4AND5, RATIOBETWEEN5AND6, RATIOBETWEEN6AND7, RATIOBETWEEN7AND8 };
+#define ENGINE_RPM    0x0C
+#define VEHICLE_SPEED 0x0D
+#define CAN_REQST_ID  0x7DF 
+#define CAN_REPLY_ID  0x7E8
 
  
 uint8_t kmh = 0;
@@ -26,9 +42,8 @@ uint8_t gear = 0;
 uint16_t ratio;
 uint16_t average;
 float changes;
-#define AVGFILTERSIZE 4
 
-RunningAverage myRA(AVGFILTERSIZE);
+RunningAverage myRA(FILTERSIZE);
 
 
 #define SERVICE_UUID "00001ff8-0000-1000-8000-00805f9b34fb"
@@ -220,20 +235,22 @@ void loop() {
     changes = myRA.getAverage();
   
     prev = next;
-    if ( kmh<1 )                            { next = 0; }
-    else if ( changes>0.1 || changes<-0.1 ) { int noop; }     // catches when clutch is pressed and ratio value has changes. Smaller changes can equal noise when in gear but also when by *chance* speed and rpm happen to match even when clutch is pressed
-    else if ( ratio>ratios[0] )             { next = 1; } 
-    else if ( ratio>ratios[1] )             { next = 2; } 
-    else if ( rpm<1200 )                    { int noop; }     // when switching gears very slow rpm goes slowly towards idle and often happen by chance to match change ratio between rpm and kmh resulting in wrong (high) gears shown. This disables gear matching when rpm is getting close to idle.
-    else if ( ratio>ratios[2] )             { next = 3; } 
-    else if ( ratio>ratios[3] )             { next = 4; } 
-    else if ( ratio>ratios[4] )             { next = 5; } 
-    else if ( ratio>ratios[5] )             { next = 6; } 
-    else if ( ratio>ratios[6] )             { next = 7; } 
+    if ( kmh<1 )                           { next = 0; }
+    else if ( changes >  CHANGETHRESHOLD 
+           || changes < -CHANGETHRESHOLD ) { int noop; }     // catches when clutch is pressed and ratio value has changes. Smaller changes can equal noise when in gear but also when by *chance* speed and rpm happen to match even when clutch is pressed
+    else if ( ratio>ratios[0] )            { next = 1; } 
+    else if ( ratio>ratios[1] )            { next = 2; } 
+    else if ( rpm<1200 )                   { int noop; }     // when switching gears very slow rpm goes slowly towards idle and often happen by chance to match change ratio between rpm and kmh resulting in wrong (high) gears shown. This disables gear matching when rpm is getting close to idle.
+    else if ( ratio>ratios[2] )            { next = 3; } 
+    else if ( ratio>ratios[3] )            { next = 4; } 
+    else if ( ratio>ratios[4] )            { next = 5; } 
+    else if ( ratio>ratios[5] )            { next = 6; } 
+    else if ( ratio>ratios[6] )            { next = 7; } 
+    else if ( ratio>ratios[7] )            { next = 8; } 
     
     if (next==prev) { nextcntr++; }    
     else            { nextcntr = 0; }
-    if (nextcntr>2) { gear = next; }    // Filter away single "glitches" of ratio (gear) matches that can be erroneous due to clutch being pushed down
+    if (nextcntr>=MATCHGLITCHES) { gear = next; } // Filter away single "glitches" of ratio (gear) matches that can be erroneous due to clutch being pushed down
   
     printData();      // PRINT DATA ON SERIAL USB
     if (isCanBusConnected) {

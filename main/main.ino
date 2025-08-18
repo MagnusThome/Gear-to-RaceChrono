@@ -17,9 +17,9 @@
 #define RATIOBETWEEN6AND7 21
 #define RATIOBETWEEN7AND8 18
 
-#define CHANGETHRESHOLD 0.1   // Changes of ratio smaller than this means car is in gear and clutch pedal not pressed down = match a gear 
+#define CHANGETHRESHOLD 0.1 // Changes of ratio smaller than this means car is in gear and clutch pedal not pressed down = match a gear 
 #define MATCHGLITCHES 4     // Number of times a valid ratio match must occur before showing the new gear value
-#define FILTERSIZE 4        // Size of samples in the running average filter of ratio
+#define RAFILTERSIZE 4      // Size of samples in the running average filter of ratio
 
 #define CAN0_RX_GPIO GPIO_NUM_13  // Connect to the CAN transceiver
 #define CAN0_TX_GPIO GPIO_NUM_14  // Connect to the CAN transceiver
@@ -43,7 +43,7 @@ uint16_t ratio;
 uint16_t average;
 float changes;
 
-RunningAverage myRA(FILTERSIZE);
+RunningAverage myRA(RAFILTERSIZE);
 
 
 #define SERVICE_UUID "00001ff8-0000-1000-8000-00805f9b34fb"
